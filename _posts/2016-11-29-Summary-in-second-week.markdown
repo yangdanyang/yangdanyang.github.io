@@ -18,8 +18,10 @@ tags:
 
 ### 1）接口声明
    先进行接口相关的声明，然后在实现类中进行相关的实现，一般都是调用相关的service在      service类中实现相关的业务逻辑(包括在service接口中进行声明和在实现类中书写具体的实现逻辑) 。
+
 ### 2）返回值的类型: 
    如果是列表类型的可以声明一个BO型的List。如在sale中写过的DepositDetailBOList 类中的属性应该包括list长度例如声明totalCount便会  后期如分页时的使用，另外还应该包括一个dataList属性用来存储返回的BO类型的数据,例如List<?>dataList，这种情况下需要先调用一个方法查询满足条件记录总的数目，然后调用另一个方法查询具体的数据信息。在处理返回值数据时，我们新建一个VO型的数据，用来存储需要的返回数据，这里没有将返回值得数据直接作为sql的返回值类型，因为有的返回值数据不能直接。 通过查询获取，需要二次处理，这种情况下便需要新建一个数据存储类，如果可以所有字段可以直接查询出来，那么就不需要这一步了。  如果返回的是一个键值对类型的数据，例如这次做的查询统计中查询收入对应的金额，订单数，便可以通过一个map类型的变量来保存数据，例如：`Map<String,Object> map = new HashMap<~>();` 调用`map.put(key,object)`
+
 ### 3）CURD操作
   当然在service实现数据操作都是调用DAO中相应的接口如果需要做一个数据操作，首先应该在DAO接口中声明调用的方法，然后在DAO实现类中实现具体的调用逻辑，主要是包装相应的参数。如果是查询类方法，单个参数可以使用String类型的数据，如果是多个参数便可以使用map类型包装参数，例如`Map<String,Object> map = new HashMap();` 如果是插入或者更新操作则可以传入BO类型的数据，当然数据的更新和插入可以在一个方法里面封装: 例如: `f(applyBO.getApplyId()!= null && StringUtils.isNotEmpty(applyBO.getApplyId()))`通过判断现有BO中是否存在Id字段信息来判断是插入操作还是更新操作。在做插入数据操作时，可以使用seq_common.nextval来作为下一条记录对应的ID,插入时间可以直接使用sysdate，当然对应的为DATE类型的数据。 如果是删除操作，则直接传入相应的参数就可以了，当然这里面的删除操作不是真正意义上的删除而只是将记录的状态进行相应的更新。 在书写dao对应的xml映射文件时，需要注意的是，如果你的参数类型或者返回值类型是自定义的那么需要在文件中进行相应的引入，例如；
  `<typeAlias alias="DepositStatics" type="com.ofpay.ofsaleapi.pojo.cateapply.DepositStatics" />`
@@ -31,7 +33,8 @@ tags:
 例如:
     `<isNotEmpty property="startTime" prepend="AND">
 		<![CDATA[ ADD_TIME >=to_date(#startTime#,'yyyy-mm-dd hh24:mi:ss') ]]>
-	</isNotEmpty>`		
+	</isNotEmpty>`
+
 ### 4)分页实现:
    `<![CDATA[
         select * from (
@@ -46,6 +49,7 @@ tags:
         )
         where rownum_ > #start#
     ]]>`	需要先进行一次查询将所有的rownum查询出来，然后进行比较，在外层查询比较rownum和起始的值	
+
 ### 5)查询日期转换:
    如果查询的日期字段为DATE类型，展示时需要的是String类型的数据，那么可以在查询时便进行相应的展示，例如:
    `SELECT  to_char(ADD_TIME,'yyyy-MM-dd HH24:mi:ss')` addTime 查询出的数据变为“2016-11-25 16:52:51”这种格式
@@ -56,6 +60,7 @@ tags:
 		  count(case when type IN(0,1) then 1 end) totalIncomecount,
 		  count(case when type = 1 then 1 end) totalExpensecount`
    当需要在同一条sql中按照多种条件来查询数据时，可以使用case when then 来进行相应的查询处理
+   
 ## 二:web端开发步骤:
 * 1:获取jsp页面返回,在controller类中调用http请求返回对应的jsp页面
       时间搜索条件，统一使用框架的控件，例如本次使用的是:<span id="queryDate"></span>      
