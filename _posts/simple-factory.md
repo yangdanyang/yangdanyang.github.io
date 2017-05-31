@@ -1,4 +1,17 @@
-##设计模式学习总结之简单工厂模式
+---
+layout:     post
+title:      "简单工厂模式"
+subtitle:   " \"Simple Factory Pattern\""
+date:       2017-05-31 
+author:     "Yang"
+header-img: "img/home-bg-art.jpg"
+catalog: true
+tags:
+    - Design Pattern
+---
+
+> “Beginning”
+## 设计模式学习总结之简单工厂模式
 ### 前言
     在之前学习设计模式过程中，主要参考CSDN大牛lovelion的技术博客
     (http://blog.csdn.net/lovelion)，这边的总结主要设计学习过程中
