@@ -13,7 +13,7 @@ tags:
 > “Beginning”
 ## 设计模式学习总结之简单工厂模式
 ### 前言
-    在之前学习设计模式过程中，主要参考CSDN大牛lovelion的技术博客(http://blog.csdn.net/lovelion)，
+    在之前学习设计模式过程,主要参考CSDN大牛lovelion的技术博客(http://blog.csdn.net/lovelion)
     这边的总结主要设计学习过程中的一些知识点。
     
 ### 定义:
