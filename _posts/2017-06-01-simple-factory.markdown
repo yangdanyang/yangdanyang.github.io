@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "简单工厂模式"
+title:      "设计模式学习总结之简单工厂模式"
 subtitle:   " \"Simple Factory Pattern\""
 date:       2017-06-01 
 author:     "Yang"
