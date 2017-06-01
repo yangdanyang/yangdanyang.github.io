@@ -1,3 +1,16 @@
+---
+layout:     post
+title:      "设计模式学习总结之代理模式"
+subtitle:   " \"Proxy Pattern\""
+date:       2017-06-06 
+author:     "Yang"
+header-img: "img/post-bg-rwd.jpg"
+catalog: true
+tags:
+    - Design Pattern
+---
+
+> “on road”
 ## 代理模式
 ### 概述:
      在软件开发中，也有一种设计模式可以提供与代购网站类似的功能。由于某些原因，客户端
