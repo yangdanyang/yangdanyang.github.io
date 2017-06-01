@@ -1,3 +1,14 @@
+---
+layout:     post
+title:      "设计模式总结之Spring中使用到的设计模式"
+subtitle:   " \"Spring Design Pattern\""
+date:       2017-06-07 
+author:     "Yang"
+header-img: "img/post-bg-rwd.jpg"
+catalog: true
+tags:
+    - Design Pattern
+---
 ## 工厂模式
 ### IOC容器
     Spring中IOC容器会以某种方式加载Configurtion Metadata(通常也就是XML格式的配置信
