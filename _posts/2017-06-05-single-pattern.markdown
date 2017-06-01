@@ -1,3 +1,16 @@
+---
+layout:     post
+title:      "设计模式学习总结之单例模式"
+subtitle:   " \"Single Pattern\""
+date:       2017-06-05 
+author:     "Yang"
+header-img: "img/home-bg-geek.jpg"
+catalog: true
+tags:
+    - Design Pattern
+---
+
+> “on road”
 ## 单例模式
 
 ### 定义:
