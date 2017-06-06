@@ -1,3 +1,17 @@
+---
+layout:     post
+title:      "redis 学习总结"
+subtitle:   " \"redis\""
+date:       2017-06-08 
+author:     "Yang"
+header-img: "img/post-bg-alitrip.jpg"
+catalog: true
+tags:
+    - Data base
+---
+
+> “on road”
+
 ## redis 学习总结
 
 ### 概念
