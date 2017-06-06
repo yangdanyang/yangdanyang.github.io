@@ -1,3 +1,16 @@
+---
+layout:     post
+title:      "Active MQ 总结"
+subtitle:   " \"MQ\""
+date:       2017-06-08 
+author:     "Yang"
+header-img: "img/post-bg-alitrip.jpg"
+catalog: true
+tags:
+    - MQ
+---
+
+> “on road”
 ## ACTIVE MQ 学习总结
 
 ### 概念
