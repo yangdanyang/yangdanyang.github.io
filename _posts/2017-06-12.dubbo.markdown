@@ -1,1 +1,14 @@
+---
+layout:     post
+title:      "Dubbo 使用总结"
+subtitle:   " \"Dubbo\""
+date:       2017-06-08 
+author:     "Yang"
+header-img: "img/post-bg-alitrip.jpg"
+catalog: true
+tags:
+    - RPC
+---
+
+> “on road”
 ## dubbo 使用总结
