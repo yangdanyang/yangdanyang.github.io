@@ -11,6 +11,482 @@ tags:
 ---
 
 > “on road”
-## ACTIVE MQ 学习总结
+# ACTIVE MQ 学习总结
 
-### 概念
+## 概念
+
+### JMS 
+    JMS的全称是Java Message Service，即Java消息服务。它主要用于在生产者和消
+    费者之间进行消息传递，生产者负责产生消息，而消费者负责接收消息。把它应用到实际
+    的业务需求中的话我们可以在特定的时候利用生产者生成一消息，并进行发送，对应的消
+    费者在接收到对应的消息后去完成对应的业务逻辑。对于消息的传递有两种类型，一种是
+    点对点的，即一个生产者和一个消费者一一对应；另一种是发布/订阅模式，即一个生产
+    者产生消息并进行发送后，可以由多个消费者进行接收。
+    
+    JMS包括以下基本构件：
+    连接工厂，是客户用来创建连接的对象，ActiveMQ提供的是ActiveMQConnectionFactory；
+    连接connection；
+    会话session，是发送和接收消息的上下文，用于创建消息生产者，消息消费者，
+    相比rocketMQ会话session是提供事务性的；
+    目的地destination，指定生产消息的目的地和消费消息的来源对象；
+    生产者、消费者，由会话创建的对象，顾名思义。
+  
+### 两种模式  
+    (1)、点对点方式（point-to-point）
+
+	点对点的消息发送方式主要建立在 Message Queue,Sender,reciever上，Message Queue 存
+	贮消息，Sneder 发送消息，receive接收消息.每个消息只能有一个消费者。具体点就是Sender 
+	Client发送Message Queue ,而 receiver Cliernt从Queue中接收消息和"发送消息已接
+	受"到Quere,确认消息接收。消息发送客户端与接收客户端没有时间上的依赖，发送客户端可以在任
+	何时刻发送信息到Queue，而不需要知道接收客户端是不是在运行
+
+	(2)、发布/订阅 方式（publish/subscriber Messaging）
+	
+	发布/订阅方式用于多接收客户端的方式.作为发布订阅的方式，可能存在多个接收客户端，并且接收
+	端客户端与发送客户端存在时间上的依赖。一个接收端只能接收他创建以后发送客户端发送的信息。作
+	为subscriber ,在接收消息时有两种方法，destination的receive方法，和实现message 
+	listener 接口的onMessage 方法。
+	
+### 消息确认机制
+    为了保证消息或者是请求被至少处理一次，可以引入消息的确认机制，JMS总共为我们提供了3种确认
+    机制，分别如下：
+    Auto_acknowledge:JMS客户端会自动向服务器发送确认消息，如果服务器没有接收到这个确认消
+    息，就会认为该消息未被传送，并可能会试图重新发送。
+    Client_acknowledge:Auto_acknowledge模式中，确认总是隐式的在onMessage处理器返回之
+    后发生，而Client_acknowledge则是由客户端控制何时发送确认，这样的话，可以保证接收消息
+    的客户端能够实现对“保证消息传送”更细粒度的控制。当然，这种方式需要客户端来显示的发送，例
+    如调用message.acknowledge();方法
+    Dups_OK_acknowledge:如果在会话上指定这种模式的话，JMS提供者可以将一条消息向统一目的
+    地发送两次以上，这与前面两种模式的“一次且仅仅一次”的语义就不同了，用于可以接收重复消息的
+    程序。
+    
+### 三种消息监听器
+
+#### MessageListener
+    是最原始的消息监听器，它是JMS规范中定义的一个接口。其中定义了一个用于处理接收到的消息的
+    onMessage方法，该方法只接收一个Message参数。
+    
+#### SessionAwareMessageListener
+    SessionAwareMessageListener是Spring为我们提供的，它不是标准的JMS MessageListener。
+    MessageListener的设计只是纯粹用来接收消息的，假如我们在使用MessageListener处理接收到的
+    消息时我们需要发送一个消息通知对方我们已经收到这个消息了，那么这个时候我们就需要在代码里面去
+    重新获取一个Connection或Session。SessionAwareMessageListener的设计就是为了方便我们在
+    接收到消息后发送一个回复的消息，它同样为我们提供了一个处理接收到的消息的onMessage方法，但是
+    这个方法可以同时接收两个参数，一个是表示当前接收到的消息Message，另一个就是可以用来发送消息
+    的Session对象。
+    
+### MessageListenerAdapter
+    MessageListenerAdapter类实现了MessageListener接口和SessionAwareMessageListener接
+    口，它的主要作用是将接收到的消息进行类型转换，然后通过反射的形式把它交给一个普通的Java类进行
+    处理。
+    
+    MessageListenerAdapter会把接收到的消息做如下转换：
+       TextMessage转换为String对象；
+       BytesMessage转换为byte数组；
+       MapMessage转换为Map对象；
+       ObjectMessage转换为对应的Serializable对象。
+       
+    MessageListenerAdapter除了会自动的把一个普通Java类当做MessageListener来处理接收到的消
+    息之外，其另外一个主要的功能是可以自动的发送返回消息。
+    
+### 消息转换器MessageConverter
+    MessageConverter的作用主要有两方面，一方面它可以把我们的非标准化Message对象转换成我们的目
+    标Message对象，这主要是用在发送消息的时候；另一方面它又可以把我们的Message对象转换成对应的目
+    标对象，这主要是用在接收消息的时候。
+
+### 事务管理
+    根据我们上面说的，因为我们已经在对应的监听容器上定义了其sessionTransacted属性为true，所以
+    当这里抛出异常的时候JMS将对接收到的消息进行回滚，即下次进行消息接收的时候该消息仍然能够被接收
+    到。
+
+	    
+## 使用
+    JMS只是一个标准，真正在使用它的时候我们需要有它的具体实现，这里我们就使用
+    Apache的activeMQ来作为它的实现。所使用的依赖利用Maven来进行管理，具体依赖
+    如下：
+    <dependencies>  
+        <dependency>  
+            <groupId>junit</groupId>  
+            <artifactId>junit</artifactId>  
+            <version>4.10</version>  
+            <scope>test</scope>  
+        </dependency>  
+        <dependency>  
+            <groupId>org.springframework</groupId>  
+            <artifactId>spring-context</artifactId>  
+            <version>${spring-version}</version>  
+        </dependency>  
+        <dependency>  
+            <groupId>org.springframework</groupId>  
+            <artifactId>spring-jms</artifactId>  
+            <version>${spring-version}</version>  
+        </dependency>  
+        <dependency>  
+            <groupId>org.springframework</groupId>  
+            <artifactId>spring-test</artifactId>  
+            <version>${spring-version}</version>  
+        </dependency>  
+        <dependency>  
+            <groupId>javax.annotation</groupId>  
+            <artifactId>jsr250-api</artifactId>  
+            <version>1.0</version>  
+        </dependency>  
+        <dependency>  
+            <groupId>org.apache.activemq</groupId>  
+            <artifactId>activemq-core</artifactId>  
+            <version>5.7.0</version>  
+        </dependency>  
+    </dependencies>  
+    
+### 准备工作
+#### 安装并启动active mq
+     mac安装：
+        输入命令：brew install activemq //安装
+        输入命令：activemq              //看看是否安装成功
+        输入命令：activemq start        //启动activeMQ服务
+        在浏览器中输入url: http://localhost:8161/  然后就可以访问管理web 
+        console
+#### 配置ConnectionFactory
+     ConnectionFactory是用于产生到JMS服务器的链接的，Spring为我们提供了多个
+     ConnectionFactory，有SingleConnectionFactory和
+     CachingConnectionFactory.SingleConnectionFactory对于建立JMS服务器链
+     接的请求会一直返回同一个链接，并且会忽略Connection的close方法调用.
+     这里我们使用SingleConnectionFactory来作为示例:
+    <bean id="connectionFactory" class="org.springframework.jms.connection.SingleConnectionFactory"/> 
+    
+     Spring提供的ConnectionFactory只是Spring用于管理ConnectionFactory的，真正产生到
+     JMS服务器链接的ConnectionFactory还得是由JMS服务厂商提供，并且需要把它注入到Spring
+     提供的ConnectionFactory中。我们这里使用的是ActiveMQ实现的JMS，所以在我们这里真正的
+     可以产生Connection的就应该是由ActiveMQ提供的ConnectionFactory。所以定义一个
+     ConnectionFactory的完整代码应该如下所示：
+     
+    <!-- 真正可以产生Connection的ConnectionFactory，由对应的 JMS服务厂商提供-->  
+		<bean id="targetConnectionFactory" class="org.apache.activemq.ActiveMQConnectionFactory">  
+		    <property name="brokerURL" value="tcp://localhost:61616"/>  
+		</bean>  
+  
+    <!-- Spring用于管理真正的ConnectionFactory的ConnectionFactory -->  
+     <bean id="connectionFactory" class="org.springframework.jms.connection.SingleConnectionFactory">  
+    <!-- 目标ConnectionFactory对应真实的可以产生JMS Connection的ConnectionFactory -->  
+    <property name="targetConnectionFactory" ref="targetConnectionFactory"/>  
+    </bean>  
+    
+    ActiveMQ为我们提供了一个PooledConnectionFactory，通过往里面注入一个
+    ActiveMQConnectionFactory可以用来将Connection、Session和MessageProducer池化，
+    这样可以大大的减少我们的资源消耗。当使用PooledConnectionFactory时，我们在定义一个
+    ConnectionFactory时应该是如下定义：
+    <!-- 真正可以产生Connection的ConnectionFactory，由对应的 JMS服务厂商提供-->  
+    <bean id="targetConnectionFactory" class="org.apache.activemq.ActiveMQConnectionFactory">  
+    <property name="brokerURL" value="tcp://localhost:61616"/>  
+    </bean>  
+  
+    <bean id="pooledConnectionFactory" class="org.apache.activemq.pool.PooledConnectionFactory">  
+    <property name="connectionFactory" ref="targetConnectionFactory"/>  
+    <property name="maxConnections" value="10"/>  
+    </bean>  
+  
+    <bean id="connectionFactory" class="org.springframework.jms.connection.SingleConnectionFactory">  
+    <property name="targetConnectionFactory" ref="pooledConnectionFactory"/>  
+    </bean>  
+    
+#### 配置生产者
+    配置好ConnectionFactory之后我们就需要配置生产者。生产者负责产生消息并发送到JMS服务
+    器，这通常对应的是我们的一个业务逻辑服务实现类。但是我们的服务实现类是怎么进行消息的发送
+    的呢？这通常是利用Spring为我们提供的JmsTemplate类来实现的，所以配置生产者其实最核心的
+    就是配置进行消息发送的JmsTemplate。对于消息发送者而言，它在发送消息的时候要知道自己该往
+    哪里发，为此，我们在定义JmsTemplate的时候需要往里面注入一个Spring提供的
+    ConnectionFactory对象。
+    
+    <!-- Spring提供的JMS工具类，它可以进行消息发送、接收等 -->  
+    <bean id="jmsTemplate" class="org.springframework.jms.core.JmsTemplate">  
+    <!-- 这个connectionFactory对应的是我们定义的Spring提供的那个ConnectionFactory对象 -->  
+    <property name="connectionFactory" ref="connectionFactory"/>  
+    </bean>  
+    
+    在真正利用JmsTemplate进行消息发送的时候，我们需要知道消息发送的目的地，即
+    destination。在Jms中有一个用来表示目的地的Destination接口，它里面没有任何方法定义，
+    只是用来做一个标识而已。当我们在使用JmsTemplate进行消息发送时没有指定destination的时
+    候将使用默认的Destination。默认Destination可以通过在定义jmsTemplate bean对象时通
+    过属性defaultDestination或defaultDestinationName来进行注入，
+    defaultDestinationName对应的就是一个普通字符串。在ActiveMQ中实现了两种类型的
+    Destination，一个是点对点的ActiveMQQueue，另一个就是支持订阅/发布模式的
+    ActiveMQTopic。在定义这两种类型的Destination时我们都可以通过一个name属性来进行构
+    造，如：
+    
+    <!--这个是队列目的地，点对点的-->  
+    <bean id="queueDestination" class="org.apache.activemq.command.ActiveMQQueue">  
+    <constructor-arg>  
+        <value>queue</value>  
+    </constructor-arg>  
+    </bean>  
+     <!--这个是主题目的地，一对多的-->  
+    <bean id="topicDestination" class="org.apache.activemq.command.ActiveMQTopic">  
+    <constructor-arg value="topic"/>  
+    </bean>  
+    
+    假设我们定义了一个ProducerService，里面有一个向Destination发送纯文本消息的方法
+    sendMessage，那么我们的代码就大概是这个样子：
+    
+    package com.tiantian.springintejms.service.impl;  
+   
+	import javax.annotation.Resource;  
+	import javax.jms.Destination;  
+	import javax.jms.JMSException;  
+	import javax.jms.Message;  
+	import javax.jms.Session;  
+	   
+	import org.springframework.jms.core.JmsTemplate;  
+	import org.springframework.jms.core.MessageCreator;  
+	import org.springframework.stereotype.Component;  
+	   
+	import com.tiantian.springintejms.service.ProducerService;  
+	   
+	@Component  
+	public class ProducerServiceImpl implements ProducerService {  
+   
+    private JmsTemplate jmsTemplate;  
+      
+    public void sendMessage(Destination destination, final String message) {  
+        System.out.println("---------------生产者发送消息-----------------");  
+        System.out.println("---------------生产者发了一个消息：" + message);  
+        jmsTemplate.send(destination, new MessageCreator() {  
+            public Message createMessage(Session session) throws JMSException {  
+                return session.createTextMessage(message);  
+            }  
+        });  
+    }   
+  
+    public JmsTemplate getJmsTemplate() {  
+        returnjmsTemplate;  
+    }   
+  
+    @Resource  
+    public void setJmsTemplate(JmsTemplate jmsTemplate) {  
+        this.jmsTemplate = jmsTemplate;  
+    }  
+   
+    }      
+    我们可以看到在sendMessage方法体里面我们是通过jmsTemplate来发送消息到对应的
+    Destination的。到此，我们生成一个简单的文本消息并把它发送到指定目的地Destination的生
+    产者就配置好了。
+    
+#### 配置消费者
+    生产者往指定目的地Destination发送消息后，接下来就是消费者对指定目的地的消息进行消费了。
+    那么消费者是如何知道有生产者发送消息到指定目的地Destination了呢？这是通过Spring为我们
+    封装的消息监听容器MessageListenerContainer实现的，它负责接收信息，并把接收到的信息分
+    发给真正的MessageListener进行处理。每个消费者对应每个目的地都需要有对应的
+    MessageListenerContainer。对于消息监听容器而言，除了要知道监听哪个目的地之外，还需要
+    知道到哪里去监听，也就是说它还需要知道去监听哪个JMS服务器，这是通过在配置
+    MessageConnectionFactory的时候往里面注入一个ConnectionFactory来实现的。所以我们
+    在配置一个MessageListenerContainer的时候有三个属性必须指定，一个是表示从哪里监听的
+    ConnectionFactory；一个是表示监听什么的Destination；一个是接收到消息以后进行消息处
+    理的
+    MessageListener。Spring一共为我们提供了两种类型的MessageListenerContainer，
+    SimpleMessageListenerContainer和DefaultMessageListenerContainer。
+    SimpleMessageListenerContainer会在一开始的时候就创建一个会话session和消费者
+    Consumer，并且会使用标准的JMS MessageConsumer.setMessageListener()方法注册监听
+    器让JMS提供者调用监听器的回调函数。它不会动态的适应运行时需要和参与外部的事务管理。兼容
+    性方面，它非常接近于独立的JMS规范，但一般不兼容Java EE的JMS限制。
+    大多数情况下我们还是使用的DefaultMessageListenerContainer，跟
+    SimpleMessageListenerContainer相比，DefaultMessageListenerContainer会动态的
+    适应运行时需要，并且能够参与外部的事务管理。它很好的平衡了对JMS提供者要求低、先进功能如
+    事务参与和兼容Java EE环境。
+    
+    定义处理消息的MessageListener要定义处理消息的MessageListener我们只需要实现JMS规范
+    中的MessageListener接口就可以了。MessageListener接口中只有一个方法onMessage方法，
+    当接收到消息的时候会自动调用该方法。
+    
+    逻辑代码如下:
+    package com.tiantian.springintejms.listener;  
+   
+	import javax.jms.JMSException;  
+	import javax.jms.Message;  
+	import javax.jms.MessageListener;  
+	import javax.jms.TextMessage;  
+	   
+	public class ConsumerMessageListener implements MessageListener {  
+   
+    public void onMessage(Message message) {  
+        //这里我们知道生产者发送的就是一个纯文本消息，所以这里可以直接进行强制转换  
+        TextMessage textMsg = (TextMessage) message;  
+        System.out.println("接收到一个纯文本消息。");  
+        try {  
+            System.out.println("消息内容是：" + textMsg.getText());  
+        } catch (JMSException e) {  
+            e.printStackTrace();  
+        }  
+    }  
+   
+}      
+    有了MessageListener之后我们就可以在Spring的配置文件中配置一个消息监听容器了。
+    
+    <!--这个是队列目的地-->  
+    <bean id="queueDestination" class="org.apache.activemq.command.ActiveMQQueue">  
+    <constructor-arg>  
+        <value>queue</value>  
+    </constructor-arg>  
+    </bean>  
+    <!-- 消息监听器 -->  
+    <bean id="consumerMessageListener" class="com.tiantian.springintejms.listener.ConsumerMessageListener"/>      
+  
+    <!-- 消息监听容器 -->  
+    <bean id="jmsContainer"        class="org.springframework.jms.listener.DefaultMessageListenerContainer">  
+    <property name="connectionFactory" ref="connectionFactory" />  
+    <property name="destination" ref="queueDestination" />  
+    <property name="messageListener" ref="consumerMessageListener" />  
+    </bean>  
+    
+    我们可以看到我们定义了一个名叫queue的ActiveMQQueue目的地，我们的监听器就是监听了发送
+    到这个目的地的消息。至此我们的生成者和消费者都配置完成了，这也就意味着我们的整合已经完成
+    了。这个时候完整的Spring的配置文件应该是这样的：
+    
+    <?xml version="1.0" encoding="UTF-8"?>  
+	<beans xmlns="http://www.springframework.org/schema/beans"  
+	    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"  
+	    xmlns:jms="http://www.springframework.org/schema/jms"  
+	    xsi:schemaLocation="http://www.springframework.org/schema/beans  
+	     http://www.springframework.org/schema/beans/spring-beans-3.0.xsd  
+	     http://www.springframework.org/schema/context  
+	     http://www.springframework.org/schema/context/spring-context-3.0.xsd  
+	    http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd  
+	    http://www.springframework.org/schema/jms http://www.springframework.org/schema/jms/spring-jms-3.0.xsd">  
+   
+    <context:component-scan base-package="com.tiantian" />  
+   
+    <!-- Spring提供的JMS工具类，它可以进行消息发送、接收等 -->  
+    <bean id="jmsTemplate" class="org.springframework.jms.core.JmsTemplate">  
+        <!-- 这个connectionFactory对应的是我们定义的Spring提供的那个ConnectionFactory对象 -->  
+        <property name="connectionFactory" ref="connectionFactory"/>  
+    </bean>  
+      
+    <!-- 真正可以产生Connection的ConnectionFactory，由对应的 JMS服务厂商提供-->  
+    <bean id="targetConnectionFactory" class="org.apache.activemq.ActiveMQConnectionFactory">  
+        <property name="brokerURL" value="tcp://localhost:61616"/>  
+    </bean>  
+      
+    <!-- Spring用于管理真正的ConnectionFactory的ConnectionFactory -->  
+    <bean id="connectionFactory" class="org.springframework.jms.connection.SingleConnectionFactory">  
+        <!-- 目标ConnectionFactory对应真实的可以产生JMS Connection的ConnectionFactory -->  
+        <property name="targetConnectionFactory" ref="targetConnectionFactory"/>  
+    </bean>  
+      
+    <!--这个是队列目的地-->  
+    <bean id="queueDestination" class="org.apache.activemq.command.ActiveMQQueue">  
+        <constructor-arg>  
+            <value>queue</value>  
+        </constructor-arg>  
+    </bean>  
+    <!-- 消息监听器 -->  
+    <bean id="consumerMessageListener" class="com.tiantian.springintejms.listener.ConsumerMessageListener"/>  
+    <!-- 消息监听容器 -->  
+    <bean id="jmsContainer"  
+        class="org.springframework.jms.listener.DefaultMessageListenerContainer">  
+        <property name="connectionFactory" ref="connectionFactory" />  
+        <property name="destination" ref="queueDestination" />  
+        <property name="messageListener" ref="consumerMessageListener" />  
+    </bean>  
+    </beans>  
+    
+    接着我们来测试一下，看看我们的整合是否真的成功了，测试代码如下：
+    
+    package com.tiantian.springintejms.test;  
+   
+	import javax.jms.Destination;  
+	   
+	import org.junit.Test;  
+	import org.junit.runner.RunWith;  
+	import org.springframework.beans.factory.annotation.Autowired;  
+	import org.springframework.beans.factory.annotation.Qualifier;  
+	import org.springframework.test.context.ContextConfiguration;  
+	import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;  
+	import com.tiantian.springintejms.service.ProducerService;  
+	   
+	@RunWith(SpringJUnit4ClassRunner.class)  
+	@ContextConfiguration("/applicationContext.xml")  
+	public class ProducerConsumerTest {  
+   
+    @Autowired  
+    private ProducerService producerService;  
+    @Autowired  
+    @Qualifier("queueDestination")  
+    private Destination destination;  
+      
+    @Test  
+    public void testSend() {  
+        for (int i=0; i<2; i++) {  
+            producerService.sendMessage(destination, "你好，生产者！这是消息：" + (i+1));  
+        }  
+    }  
+      
+    }  
+    
+    在上面的测试代码中我们利用生产者发送了两个消息，正常来说，消费者应该可以接收到这两个消
+    息。运行测试代码后控制台输出如下：
+    ---------------生产者发送消息-----------------
+	---------------生产者发了一个消息：你好，生产者！这是消息：1
+	接收到一个纯文本消息。
+	消息内容是：你好，生产者！这是消息：1
+	---------------生产者发送消息-----------------
+	---------------生产者发了一个消息：你好，生产者！这是消息：2
+	接收到一个纯文本消息。
+	消息内容是：你好，生产者！这是消息：2       
+	看，控制台已经进行了正确的输出，这说明我们的整合确实是已经成功了。
+	
+### 为什么要使用
+    个人认为消息队列的主要特点是异步处理，主要目的是减少请求响应时间和解耦。
+    所以主要的使用场景就是将比较耗时而且不需要即时（同步）返回结果的操作作为消息放入消息队列
+    当你需要使用消息队列时，首先需要考虑它的必要性。可以使用mq的场景有很多，最常用的几种，是
+    做业务解耦/最终一致性/广播/错峰流控等。反之，如果需要强一致性，关注业务逻辑的处理结果，
+    则RPC显得更为合适。
+    
+### 使用场景
+	
+	想象一下一种难以置信的流量、电子商务网站像亚马逊。但一个用户在亚马逊上购买，有许多分开的阶
+	段贯穿，订单需要履行包括订单配置、创建发票、支付流程、订单完成、运输等。然而，但一个用户实
+	际上提交了一个订单，用户立即得到一个页面说明，“感谢您的订单”不仅如此，没有任何延迟。用户
+	也收到了订单已经收到的邮件说明，订单配置流程由亚马逊雇佣就是个很好的例子，第一步在一种更大
+	的、异步流程中。每一个订单步骤直接由分开的服务奋力地处理。但用户下了订单，异步调用提交订
+	单，但是全部订单流程不会落后于通过网页浏览器进行的同步调用。反之，订单被接受并立即被确认。
+	这个流程中剩余的步骤一步地被处理。如果发生了问题。组织流程进行，用户会被通知。这样的异步流
+	程提供大量的可扩展性。
+	
+	假设用户在你的软件中注册，服务端收到用户的注册请求后，它会做这些操作：校验用户名等信息，如
+	果没问题会在数据库中添加一个用户记录如果是用邮箱注册会给你发送一封注册成功的邮件，手机注册
+	则会发送一条短信分析用户的个人信息，以便将来向他推荐一些志同道合的人，或向那些人推荐他发送
+	给用户一个包含操作指南的系统通知等等……但是对于用户来说，注册功能实际只需要第一步，只要服
+	务端将他的账户信息存到数据库中他便可以登录上去做他想做的事情了。至于其他的事情，非要在这一
+	次请求中全部完成么？值得用户浪费时间等你处理这些对他来说无关紧要的事情么？所以实际当第一步
+	做完后，服务端就可以把其他的操作放入对应的消息队列中然后马上返回用户结果，由消息队列异步的
+	进行这些操作	
+## 原理
+### 流程图
+   ![](file:////Users/yang/Desktop/mq.png)
+### 发送消息的基本步骤：
+
+    (1)、创建连接使用的工厂类JMS ConnectionFactory
+    (2)、使用管理对象JMS ConnectionFactory建立连接Connection，并启动
+    (3)、使用连接Connection 建立会话Session
+    (4)、使用会话Session和管理对象Destination创建消息生产者MessageSender
+    (5)、使用消息生产者MessageSender发送消息
+    
+### 消息接收者从JMS接受消息的步骤
+
+	(1)、创建连接使用的工厂类JMS ConnectionFactory
+	(2)、使用管理对象JMS ConnectionFactory建立连接Connection，并启动
+    (3)、使用连接Connection 建立会话Session
+    (4)、使用会话Session和管理对象Destination创建消息接收者MessageReceiver
+    (5)、使用消息接收者MessageReceiver接受消息，需要用setMessageListener将
+    MessageListener接口绑定到MessageReceiver消息接收者必须实现了MessageListener接
+    口，需要定义onMessage事件方法。
+### 实现机制
+    最简单的消息队列可以做成一个消息转发器，把一次RPC做成两次RPC。发送者把消息投递到服务端
+    （以下简称broker），服务端再将消息转发一手到接收端，就是这么简单。当然需要消费端最终做消
+    费确认的情况是三次RPC
+    
+    一般来讲，设计消息队列的整体思路是先build一个整体的数据流,例如producer发送给
+    broker,broker发送给consumer,consumer回复消费确认，broker删除/备份消息等。
+    
+    简单来讲，服务端提供两个RPC服务，一个用来接收消息，一个用来确认消息收到。并且做到不管哪
+    个server收到消息和确认消息，结果一致即可
+
+ 
